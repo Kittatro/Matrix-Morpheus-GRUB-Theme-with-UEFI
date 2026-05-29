@@ -34,6 +34,21 @@ cp -r "$THEME_NAME" "$THEME_DIR/" || {
     exit 1
 }
 
+# Patch 30_uefi-firmware to add --class uefi so the icon is picked up
+UEFI_SCRIPT="/etc/grub.d/30_uefi-firmware"
+
+if [ -f "$UEFI_SCRIPT" ]; then
+    # Check the firmware actually supports fwsetup (UEFI only)
+    if grub-probe --target=fs /sys/firmware/efi >/dev/null 2>&1 || [ -d /sys/firmware/efi ]; then
+        echo "Patching UEFI firmware menu entry..."
+        sed -i 's/menuentry \(.*\) \$menuentry_id_option/menuentry \1 --class uefi $menuentry_id_option/' "$UEFI_SCRIPT"
+    else
+        echo "UEFI firmware not detected, skipping patch."
+    fi
+else
+    echo "No UEFI firmware script found, skipping patch."
+fi
+
 # Configure GRUB to use the new theme 
 echo "Updating GRUB configuration..."
 if grep -q '^GRUB_THEME=' "$GRUB_CFG"; then
